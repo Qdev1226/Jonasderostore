@@ -1,0 +1,130 @@
+{% comment %}
+Renders product variant options
+
+Accepts:
+- product: {Object} product object.
+- option: {Object} current product_option object.
+- block: {Object} block object.
+
+
+Usage:
+{% render 'product-variant-options',
+product: product,
+option: option,
+block: block
+%}
+{% endcomment %}
+{%- liquid
+  assign variants_available_arr = product.variants | map: 'available'
+  assign variants_option1_arr = product.variants | map: 'option1'
+  assign variants_option2_arr = product.variants | map: 'option2'
+  assign variants_option3_arr = product.variants | map: 'option3'
+
+  assign product_form_id = 'product-form-' | append: section.id
+-%}
+
+{%- for value in option.values -%}
+  {%- liquid
+    assign option_disabled = true
+
+    for option1_name in variants_option1_arr
+      case option.position
+        when 1
+          if variants_option1_arr[forloop.index0] == value and variants_available_arr[forloop.index0]
+            assign option_disabled = false
+          endif
+        when 2
+          if option1_name == product.selected_or_first_available_variant.option1 and variants_option2_arr[forloop.index0] == value and variants_available_arr[forloop.index0]
+            assign option_disabled = false
+          endif
+        when 3
+          if option1_name == product.selected_or_first_available_variant.option1 and variants_option2_arr[forloop.index0] == product.selected_or_first_available_variant.option2 and variants_option3_arr[forloop.index0] == value and variants_available_arr[forloop.index0]
+            assign option_disabled = false
+          endif
+      endcase
+    endfor
+  -%}
+
+  {%- if block.settings.picker_type == 'button' -%}
+    <input
+      type="radio"
+      id="{{ section.id }}-{{ option.position }}-{{ forloop.index0 }}"
+      name="{{ option.name }}"
+      value="{{ value | escape }}"
+      form="{{ product_form_id }}"
+      {% if option.selected_value == value %}
+      checked
+      {% endif %}
+      {% if option_disabled %}
+      class="disabled"
+      {% endif %}>
+    <label for="{{ section.id }}-{{ option.position }}-{{ forloop.index0 }}">
+      {{ value -}}
+      <span class="visually-hidden">{{ 'products.product.variant_sold_out_or_unavailable' | t }}</span>
+    </label>
+  {%- elsif block.settings.picker_type == 'dropdown' -%}
+    <option
+      value="{{ value | escape }}"
+      {% if option.selected_value == value %}
+      selected="selected"
+      {% endif %}>
+      {% if option_disabled -%}
+        {{- 'products.product.value_unavailable' | t: option_value: value -}}
+      {%- else -%}
+        {{- value -}}
+      {%- endif %}
+    </option>
+  {%- endif -%}
+{%- endfor -%}
+
+
+
+<div id="popup-overlay">
+  <div id="popup-form">
+    <h2>Popup Form</h2>
+    <form>
+      <!-- Add your form fields here -->
+      <input
+        type="text"
+        name="name"
+        placeholder="Name">
+      <input
+        type="email"
+        name="email"
+        placeholder="Email">
+      <button type="submit">Submit</button>
+    </form>
+    <button id="close-popup">Close</button>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var popupOverlay = document.getElementById('popup-overlay');
+    var closePopupButton = document.getElementById('close-popup');
+    var variantRadios = document.querySelectorAll('input[name="variant"]');
+
+// Show the popup form
+    function showPopupForm() {
+      popupOverlay.style.display = 'flex';
+    }
+
+// Hide the popup form
+    function hidePopupForm() {
+      popupOverlay.style.display = 'none';
+    }
+
+// Add event listener to show the popup form when a specific variant radio is selected
+    variantRadios.forEach(function(radio) {
+      radio.addEventListener('change', function() {
+        if (radio.value === 'specific-variant') {
+          showPopupForm();
+        } else {
+          hidePopupForm();
+        }
+      });
+    });
+
+// Add event listener to hide the popup form
+    closePopupButton.addEventListener('click', hidePopupForm);
+  });
+</script>
